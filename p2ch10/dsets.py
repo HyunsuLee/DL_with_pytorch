@@ -55,21 +55,21 @@ def getCandidateInfoList(requireOnDisk_bool=True):
             series_uid = row[0]
 
             if series_uid not in presentOnDisk_set and requireOnDisk_bool:
-                continue
+                continue # skip uid if there are no data on disk
 
             isNodule_bool = bool(int(row[4]))
             candidateCenter_xyz = tuple([float(x) for x in row[1:4]])
 
             candidateDiameter_mm = 0.0
-            for annotation_tup in diameter_dict.get(series_uid, []):
+            for annotation_tup in diameter_dict.get(series_uid, []): 
                 annotationCenter_xyz, annotationDiameter_mm = annotation_tup
                 for i in range(3):
                     delta_mm = abs(candidateCenter_xyz[i] - annotationCenter_xyz[i])
-                    if delta_mm > annotationDiameter_mm / 4:
-                        break
-                else:
+                    if delta_mm > annotationDiameter_mm / 4: # compare location of nodule in candidate vs annotation
+                        break # if distance of center of nodule from two record bigger than half of radius. discar
+                else: # note that this indentation seems to be incorrect
                     candidateDiameter_mm = annotationDiameter_mm
-                    break
+                    break # if one of delta distance(xyz) within half radius, impute annotation diameter to candidate
 
             candidateInfo_list.append(CandidateInfoTuple(
                 isNodule_bool,
@@ -104,6 +104,13 @@ class Ct:
         self.direction_a = np.array(ct_mhd.GetDirection()).reshape(3, 3)
 
     def getRawCandidate(self, center_xyz, width_irc):
+        '''
+        arg: information of center of xyz coordinate from raw CT
+             size of voxel(irc) 
+        return 
+            list of index information of chunks of CT images(3D)
+            center of irc coordinate
+        '''
         center_irc = xyz2irc(
             center_xyz,
             self.origin_xyz,
@@ -147,7 +154,7 @@ def getCtRawCandidate(series_uid, center_xyz, width_irc):
     ct_chunk, center_irc = ct.getRawCandidate(center_xyz, width_irc)
     return ct_chunk, center_irc
 
-class LunaDataset(Dataset):
+class LunaDataset(Dataset): # intergration with pytorch API
     def __init__(self,
                  val_stride=0,
                  isValSet_bool=None,
