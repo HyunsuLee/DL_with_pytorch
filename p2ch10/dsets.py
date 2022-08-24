@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 raw_cache = getCache('part2ch10_raw')
-data_path_luna = '~/Documents/data_ML/LUNA/'
+data_path_luna = '/media/hyunsu/data2/01.DataAnalysis/data_ML/LUNA/'
 
 CandidateInfoTuple = namedtuple( # we should deal with annotation db and clean it before handle raw data for training.
     'CandidateInfoTuple',
@@ -67,9 +67,9 @@ def getCandidateInfoList(requireOnDisk_bool=True):
                     delta_mm = abs(candidateCenter_xyz[i] - annotationCenter_xyz[i])
                     if delta_mm > annotationDiameter_mm / 4: # compare location of nodule in candidate vs annotation
                         break # if distance of center of nodule from two record bigger than half of radius. discar
-                else: # note that this indentation seems to be incorrect
-                    candidateDiameter_mm = annotationDiameter_mm
-                    break # if one of delta distance(xyz) within half radius, impute annotation diameter to candidate
+                    else: # note that this indentation seems to be incorrect
+                        candidateDiameter_mm = annotationDiameter_mm
+                        break # if one of delta distance(xyz) within half radius, impute annotation diameter to candidate
 
             candidateInfo_list.append(CandidateInfoTuple(
                 isNodule_bool,
@@ -83,9 +83,10 @@ def getCandidateInfoList(requireOnDisk_bool=True):
 
 class Ct:
     def __init__(self, series_uid):
+        
         mhd_path = glob.glob(
             data_path_luna+'subset*/{}.mhd'.format(series_uid)
-        )[0]
+        )
 
         ct_mhd = sitk.ReadImage(mhd_path)
         ct_a = np.array(sitk.GetArrayFromImage(ct_mhd), dtype=np.float32)
@@ -99,9 +100,9 @@ class Ct:
         self.series_uid = series_uid
         self.hu_a = ct_a
 
-        self.origin_xyz = XyzTuple(*ct_mhd.GetOrigin())
-        self.vxSize_xyz = XyzTuple(*ct_mhd.GetSpacing())
-        self.direction_a = np.array(ct_mhd.GetDirection()).reshape(3, 3)
+        self.origin_xyz = XyzTuple(*ct_mhd.GetOrigin()[:3])
+        self.vxSize_xyz = XyzTuple(*ct_mhd.GetSpacing()[:3])
+        self.direction_a = np.array(ct_mhd.GetDirection()).reshape(4, 4)[:3,:3]
 
     def getRawCandidate(self, center_xyz, width_irc):
         '''
@@ -160,8 +161,9 @@ class LunaDataset(Dataset): # intergration with pytorch API
                  isValSet_bool=None,
                  series_uid=None,
             ):
+        
         self.candidateInfo_list = copy.copy(getCandidateInfoList())
-
+        
         if series_uid:
             self.candidateInfo_list = [
                 x for x in self.candidateInfo_list if x.series_uid == series_uid
@@ -181,14 +183,21 @@ class LunaDataset(Dataset): # intergration with pytorch API
             "validation" if isValSet_bool else "training",
         ))
 
-    def __len__(self):
+    def __len__(self): # necessary method for dataset class integrating pytorch
+        '''
+        return N of samples
+        '''
         return len(self.candidateInfo_list)
 
-    def __getitem__(self, ndx):
+    def __getitem__(self, ndx): # necessary method for dataset class integrating pytorch
+        '''
+        arg: ndx - index integer 
+        return sample item (tuple) through from 0 to N-1
+        '''
         candidateInfo_tup = self.candidateInfo_list[ndx]
         width_irc = (32, 48, 48)
 
-        candidate_a, center_irc = getCtRawCandidate(
+        candidate_a, center_irc = getCtRawCandidate( # here tuple sample generated
             candidateInfo_tup.series_uid,
             candidateInfo_tup.center_xyz,
             width_irc,
@@ -208,6 +217,6 @@ class LunaDataset(Dataset): # intergration with pytorch API
         return (
             candidate_t,
             pos_t,
-            candidateInfo_tup.series_uid,
-            torch.tensor(center_irc),
+            candidateInfo_tup.series_uid, # training sample 
+            torch.tensor(center_irc), # training sample 
         )

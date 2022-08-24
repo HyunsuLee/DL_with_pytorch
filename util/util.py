@@ -17,7 +17,7 @@ IrcTuple = collections.namedtuple('IrcTuple', ['index', 'row', 'col'])
 XyzTuple = collections.namedtuple('XyzTuple', ['x', 'y', 'z'])
 
 def irc2xyz(coord_irc, origin_xyz, vxSize_xyz, direction_a):
-    cri_a = np.array(coord_irc)[::-1]
+    cri_a = np.array(coord_irc)[::-1] # conversion of seqeunce of array to match xyz
     origin_a = np.array(origin_xyz)
     vxSize_a = np.array(vxSize_xyz)
     coords_xyz = (direction_a @ (cri_a * vxSize_a)) + origin_a
