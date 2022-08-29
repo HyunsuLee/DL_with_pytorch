@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 raw_cache = getCache('part2ch11_raw')
-data_path_luna = '/media/hyunsu/data2/01.DataAnalysis/data_ML/LUNA/'
+data_path_luna = os.path.abspath('../../data_ML/LUNA/')
 
 CandidateInfoTuple = namedtuple(
     'CandidateInfoTuple',
@@ -36,7 +36,7 @@ def getCandidateInfoList(requireOnDisk_bool=True):
     # We construct a set with all series_uids that are present on disk.
     # This will let us use the data, even if we haven't downloaded all of
     # the subsets yet.
-    mhd_list = glob.glob(data_path_luna+'subset*/*.mhd')
+    mhd_list = glob.glob(data_path_luna+'/subset*/*.mhd')
     presentOnDisk_set = {os.path.split(p)[-1][:-4] for p in mhd_list}
 
     diameter_dict = {}
@@ -85,7 +85,7 @@ def getCandidateInfoList(requireOnDisk_bool=True):
 class Ct:
     def __init__(self, series_uid):
         mhd_path = glob.glob(
-            data_path_luna+'subset*/{}.mhd'.format(series_uid)
+            data_path_luna+'/subset*/{}.mhd'.format(series_uid)
         )[0]
 
         ct_mhd = sitk.ReadImage(mhd_path)
